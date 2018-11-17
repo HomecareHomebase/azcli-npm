@@ -1,8 +1,4 @@
-/**
-* @Method: Returns the plural form of any noun.
-* @Param {string}
-* @Return {string}
-*/
-export function getPlural (str: any) : string {
-    return "";
-  }
+import * as az from './azwrapper';
+
+var e : az.azWrapper = new az.azWrapper()
+console.log(e.getAzCliVersion());

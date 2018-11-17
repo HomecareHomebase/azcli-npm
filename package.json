@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "mocha --reporter spec",
-    "build": "tsc -p ./lib"
+    "build": "tsc -p ./lib",
+    "build:live": "nodemon --watch 'lib/**/*.ts' --exec 'ts-node' src/index.ts"
   },
   "repository": {
     "type": "git",
@@ -27,6 +28,10 @@
     "@types/node": "^10.12.9",
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
-    "typescript": "^3.1.6"
+    "typescript": "^3.1.6",
+    "@types/q": "^1.5.1"
+  },
+  "dependencies": {
+    "q": "^1.5.1"
   }
 }
