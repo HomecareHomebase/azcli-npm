@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "mocha --reporter spec",
+    "test": "mocha --timeout 30000 -r ts-node/register test/**/*.ts",
     "build": "tsc -p ./lib",
     "build:live": "nodemon --watch 'lib/**/*.ts' --exec 'ts-node' src/index.ts",
     "release": "standard-version"
@@ -26,11 +26,14 @@
   },
   "homepage": "https://github.com/HomecareHomebase/azcli-npm#readme",
   "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.5",
     "@types/node": "^10.12.9",
     "@types/q": "^1.5.1",
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
     "standard-version": "^4.4.0",
+    "ts-node": "^7.0.1",
     "typescript": "^3.1.6"
   },
   "dependencies": {

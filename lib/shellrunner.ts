@@ -103,6 +103,11 @@ export class ShellRunner extends events.EventEmitter {
         return result;
     }
 
+    /** Reset all arugments */
+    public clear(): void {
+        this.args = []
+    }
+
     /**
      * Add argument
      * Add one or more arguments to the argument buffer 
@@ -163,14 +168,13 @@ export class ShellRunner extends events.EventEmitter {
 
     public exec() : IExecResults {
 
-        let defer = Q.defer();
+       // let defer = Q.defer();
 
         let r = child.spawnSync(this.getShellPath(), this.getShellArgs(), this.getSpawnOptions());
 
-        //reset args so we can reuse the runner
-        this.args = [];
+        this.clear()
         
-        var res: IExecResults = <IExecResults>{ code: r.status, error: r.error};
+        var res: IExecResults = <IExecResults>{ code: r.status, error: r.error, stdout: "", stderr: ""};
         res.stdout = (r.stdout) ? r.stdout.toString() : "";
         res.stderr = (r.stderr) ? r.stderr.toString() : "";
         return res;
