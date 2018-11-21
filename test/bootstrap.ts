@@ -1,107 +1,76 @@
-import cli from '../dist'
+import cli, { IAzOptions, IExecResults, 
+  MockResponseTypes, MockRunner, MockResponse, MockResponseFunctions} from '../dist'
 import {expect} from 'chai'
 import 'mocha'
 
 describe('bootstrap', () => {
 
-  it('should return version', () => {
-    let runner = new cli();
+  let runner: cli
+  let mr: MockResponseFunctions
+
+  beforeEach(()=> {
+
+    let options = <IAzOptions>{ shellRunner: MockRunner}
+    let wrapper = MockResponse(options)
+
+    runner = wrapper.cli
+    mr = wrapper.mr
+  })
+
+  it('#should return version', () => {
+
     var version = runner.getAzCliVersion()
     expect(version).is.not.null
   });
 
-  it ('should login with secret', ()=>{
-
-    //service id and secret are stored in env vars for security.
-    let tenantId = process.env.AZCLI_TEST_TENATID
-    let serviceId = process.env.AZCLI_TEST_SERVICEID
-    let serviceSecret = process.env.AZCLI_TEST_SERVICESECRET
-
-    let envs_set = tenantId && serviceId && serviceSecret
-    if (!envs_set) return; //we don't test login if not set
-
-    let runner = new cli();
-    let result = runner.login(tenantId, serviceId, serviceSecret);
-    expect(result).is.true;
-  });
-
-  it ('should login with certificate', ()=>{
-
-    //service id and secret are stored in env vars for security.
-    let tenantId = process.env.AZCLI_TEST_TENATID
-    let serviceId = process.env.AZCLI_TEST_SERVICEID
-    let serviceSecret = process.env.AZCLI_TEST_CERTIFICATE
-
-    let envs_set = tenantId && serviceId && serviceSecret
-    if (!envs_set) return; //we don't test login if not set
-
-    let runner = new cli();
-    let result = runner.loginWithCert(tenantId, serviceId, serviceSecret);
-    expect(result).is.true;
-  });
-
-  it ('Set subscription with args', ()=>{
-
-    //service id and secret are stored in env vars for security.
-    let tenantId = process.env.AZCLI_TEST_TENATID
-    let serviceId = process.env.AZCLI_TEST_SERVICEID
-    let serviceSecret = process.env.AZCLI_TEST_SERVICESECRET
-    let subscription = process.env.AZCLI_TEST_SUBSCRIPTION
-
-    let envs_set = tenantId && serviceId && serviceSecret && subscription
-    if (!envs_set) return; //we don't test login if not set
-
-    let runner = new cli();
-    //login is assumed passed already
+  it ('#should login with secret', ()=>{
 
     expect(()=>{
-      runner.arg('account').arg('set').arg('--subscription=' + subscription).exec()
+      mr.AddMockResponse( MockResponseTypes.justReturnCode)
+        .login('tenant','account','secret')
     }).to.not.throw();
   });
 
-  it ('Set subscription with line', ()=>{
-
-    //service id and secret are stored in env vars for security.
-    let tenantId = process.env.AZCLI_TEST_TENATID
-    let serviceId = process.env.AZCLI_TEST_SERVICEID
-    let subscription = process.env.AZCLI_TEST_SUBSCRIPTION
-
-    let envs_set = tenantId && serviceId && subscription
-    if (!envs_set) return; //we don't test login if not set
-
-    let runner = new cli();
-    //login is assumed passed already
+  it ('#should login with certificate', ()=>{
 
     expect(()=>{
-      runner.line('account set --subscription=\"' + subscription+'\"').exec()
+      mr.AddMockResponse( MockResponseTypes.justReturnCode)
+        .loginWithCert('tenantId', 'serviceId', 'serviceCert')
     }).to.not.throw();
   });
 
-  it ('List webapps', ()=>{
+  it ('#Set subscription with spaces', ()=>{
 
-    //service id and secret are stored in env vars for security.
-    let tenantId = process.env.AZCLI_TEST_TENATID
-    let serviceId = process.env.AZCLI_TEST_SERVICEID
-    let subscription = process.env.AZCLI_TEST_SUBSCRIPTION
-
-    let envs_set = tenantId && serviceId && subscription
-    if (!envs_set) return; //we don't test login if not set
-
-    let runner = new cli();
-    //login is assumed passed already
-
+    
     expect(()=>{
-      runner.line('account set --subscription=\"' + subscription+'\"').exec()
+      mr.AddMockResponse( MockResponseTypes.justReturnCode)
+        .setSubscription('subscription with space')
+    }).to.not.throw();
+  });
+
+  it ('#List webapps', ()=>{
+    
+    var results: any = null
+    expect(()=>{
+      mr.AddMockResponse( MockResponseTypes.justReturnCode)
+        .setSubscription('subscription with space')
+      
+      results = 
+        mr.AddResponse(<IExecResults>{ code: 0, stdout: JSON.stringify([{id: '/id'}]) })
+        .beginCmd()
+          .arg('webapp')
+          .arg('list')
+          .execJson<any>()
     }).to.not.throw();
 
-    let results = runner.arg('webapp').arg('list').execJson<any>()
     expect(results).is.not.null
+    expect(results[0].id).is.eq('/id')
 
   });
 
-  it ('Logout', ()=>{
+  it ('#Logout', ()=>{
 
-    let runner = new cli();
+    mr.AddMockResponse( MockResponseTypes.justReturnCode )
 
     expect(()=>{
       runner.logout()

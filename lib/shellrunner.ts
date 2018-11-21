@@ -21,6 +21,10 @@ export interface IExecResults {
     error: Error;
 }
 
+export interface ShellRunnerType {
+    new(shellPath: string): ShellRunner;
+  }
+
 export class ShellRunner extends events.EventEmitter {
     constructor(shellPath: string){
         super()

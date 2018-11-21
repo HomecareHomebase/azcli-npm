@@ -1,7 +1,5 @@
-import * as sr from './shellrunner'
+import { ShellRunner, ShellRunnerType, IExecResults } from './shellrunner'
 import * as events from 'events';
-import * as os from 'os';
-import * as path from 'path'
 
 /**
  * Error object for failed az-cli commands
@@ -15,28 +13,61 @@ export interface IAzError {
     code: number;
 }
 
+/** Configuration Options */
+export interface IAzOptions {
+
+    /** Minimum supported version of the az cli command tool. */
+    minVersion?: string
+    /** Maximum supported version of the az cli command tool (version must be lower then this). */
+    maxVersion?: string
+    /** Ignore all version checks and allow attempted usage. Can also be overriden with the envvar AZCLI_SKIPVERSIONCHECK=1 */
+    ignoreVersion?: boolean
+
+    /** Override the underlying shell runner for the az cli tool */
+    shellRunner?: ShellRunnerType
+}
+
+
 /**
  * Wrapper for executing az-cli commands with simple options for string/JsonObject based return data
  */
 export default class cli extends events.EventEmitter {
 
+    private _buildOptions(options: IAzOptions | null): IAzOptions {
+
+        options = options || <IAzOptions>{}
+        options.minVersion = options.minVersion || "2.0.0"
+        options.maxVersion = options.maxVersion || "2.1"
+        options.ignoreVersion = options.ignoreVersion || false
+        options.shellRunner = options.shellRunner || ShellRunner
+
+        return options
+    }
     /**
      * Create new wrapper instance to execute commands. This wrapper can be reused with new arguments after each exec* call.
      * @constructor
-     * @param {string} minVersion - Minimum supported version of the az cli command tool.
-     * @param {string }maxVersion - Maximum supported version of the az cli command tool (version must be lower then this).
-     * @param {boolean} ignoreVersion - Ignore all version checks and allow attempted usage. Can also be overriden with the envvar AZCLI_SKIPVERSIONCHECK=1
+     * @param {IAzOptions} - configuration options
      */
-    constructor(minVersion: string = "2.0.0", maxVersion: string = "2.1", ignoreVersion: boolean = false){
+    constructor(options: IAzOptions | null = null) {
         super()
+
+        //expand out options to cover defaults
+        options = this._buildOptions(options)
+
+        if (options.shellRunner == undefined)
+            throw "shellRunner is undefined"
+        if (options.minVersion == undefined)
+            throw "minVersion is undefined"
+        if (options.maxVersion == undefined)
+            throw "maxVersion is undefined"
 
         //seems libuv has a bug in windows where it can't resolve commands to .cmd
         //following check resolve it.
         if (process.platform == 'win32') {
-            this.runner = new sr.ShellRunner('az.cmd');
+            this.runner = new options.shellRunner('az.cmd');
         }
         else {
-            this.runner = new sr.ShellRunner('az');
+            this.runner = new options.shellRunner('az');
         }
 
         let version = this.validateVersion();
@@ -44,31 +75,31 @@ export default class cli extends events.EventEmitter {
 
         var envSkip = this.toBool(process.env.AZCLI_SKIPVERSIONCHECK || "");
         if (envSkip)
-            ignoreVersion =  envSkip;
+            options.ignoreVersion =  envSkip;
 
-        if (!ignoreVersion){
+        if (!options.ignoreVersion){
 
-            var isNewerOrSame = this.compareVersions(version, minVersion);
+            var isNewerOrSame = this.compareVersions(version, options.minVersion);
             if (isNewerOrSame >= 0)
             {
-                var isOlderThen = this.compareVersions(version,maxVersion);
+                var isOlderThen = this.compareVersions(version,options.maxVersion);
                 if (isOlderThen == -1) {
                     return;
                 }
             }
 
             //fall through means it's either < minVersion or >= maxVersion
-            throw "version does not pass: " + minVersion + " <= " + version + " > " + maxVersion;
+            throw "version does not pass: " + options.minVersion + " <= " + version + " > " + options.maxVersion;
         }
-    };
+    }
 
-    private runner: sr.ShellRunner;
+    private runner: ShellRunner;
     private azVersion: string;
 
     private usingCert: boolean = false;
     private certPath: string = "";
 
-    private throwIfError(result : sr.IExecResults): void {
+    private throwIfError(result : IExecResults): void {
         if (result.code != 0){
             this.emit('error', "Error Code: [" + result.code + "]");
             this.emit('error', result.stderr);
@@ -127,7 +158,7 @@ export default class cli extends events.EventEmitter {
         return (/^(true|1)$/i).test(a);
     }
 
-    private _login(tenantId: string, serviceId: string, serviceSecret: string | null = null, certificate: string | null = null) : boolean {
+    private _login(tenantId: string, serviceId: string, serviceSecret: string | null = null, certificate: string | null = null) : void {
 
         if (certificate != null) {
             this.usingCert = true;
@@ -141,13 +172,11 @@ export default class cli extends events.EventEmitter {
 
         this.runner.clear()
         this.arg('login')
-        this.arg('--service-principal')
-        this.arg('-u '+serviceId)
-        this.arg('-p '+serviceSecret)
-        this.arg('--tenant='+tenantId);
-
-        var r = this.runner.exec();
-        return r.code == 0;        
+            .arg('--service-principal')
+            .arg('-u '+serviceId)
+            .arg('-p '+serviceSecret)
+            .arg('--tenant='+tenantId)
+            .exec()
     }
 
     /** Return the detected az-cli tool version */
@@ -161,10 +190,12 @@ export default class cli extends events.EventEmitter {
      * @param tenantId tenant which contains the service principal
      * @param serviceId accountId of the service principal
      * @param serviceSecret service principal secret/password
-     * @returns {boolean} true if logged in
+     * @returns {cli} return self for chaining
+     * @throws {IAzError}
      */
-    public login(tenantId: string, serviceId: string, serviceSecret: string) : boolean {
-        return this._login(tenantId, serviceId, serviceSecret);
+    public login(tenantId: string, serviceId: string, serviceSecret: string) : cli {
+        this._login(tenantId, serviceId, serviceSecret)
+        return this
     }
 
     /**
@@ -172,26 +203,44 @@ export default class cli extends events.EventEmitter {
      * @param tenantId tenant which contains the service principal
      * @param serviceId accountId of the service principal
      * @param certificatePath path to a PEM certificate associated with the service principal
-     * @returns {boolean} true if logged in
+     * @returns {cli} return self for chaining
+     * @throws {IAzError}
      */
-    public loginWithCert(tenantId: string, serviceId: string, certificatePath: string) : boolean {
-        return this._login(tenantId, serviceId, null, certificatePath);
+    public loginWithCert(tenantId: string, serviceId: string, certificatePath: string) : cli {
+        this._login(tenantId, serviceId, null, certificatePath)
+        return this
     }
 
     /** Logout of the current account */
-    public logout(): boolean {
+    public logout(): cli {
 
         this.runner.clear()
         this.arg('account')
-        this.arg('clear')
+            .arg('clear')
+            .exec()
+        return this
+    }
 
-        try {
-            this.exec()
-            return true
-        }
-        catch(err) {
-            return false
-        }
+    /**
+     * set the current azure subscription context
+     * @param subscription {string} - Name of the subscription
+     * @returns {cli} - return self for chaining
+     * @throws {IAzError}
+     */
+    public setSubscription(subscription: string) : cli {
+
+        this.runner.clear()
+        this.arg('account')
+            .arg('set')
+            .arg('--subscription=' + subscription)
+            .exec()
+        return this
+    }
+
+    /** start a new command stack that should end with an exec*() call */
+    public beginCmd(): cli {
+        this.runner.clear()
+        return this
     }
 
     /**
@@ -260,3 +309,7 @@ export default class cli extends events.EventEmitter {
         this.throwIfError(result);
     }
 }
+
+//Barrel exporting our supporting types for unit/mock support
+export * from './mockrunner'
+export * from './shellrunner'

@@ -21,17 +21,28 @@ var cli = new azcli()
 console.log(cli.getAzCliVersion())
 ```
 
+Set configuration property overrides
+
+```js
+import azcli from 'azcli-npm'
+
+var cli = new azcli(<IAzOptions> {
+    minVersion: '2.0.0'
+    maxVersion: '2.1'
+    ignoreVersion: false
+})
+
+console.log(cli.getAzCliVersion())
+```
+
 Login with a SP and secret
 
 ```js
 import azcli from 'azcli-npm';
 
 var cli = new azcli()
-var result = cli.login('<tenant-id>', '<service-id>','<service-secret>')
-console.log(result)
-
-result = cli.logout()
-console.log(result)
+cli.login('<tenant-id>', '<service-id>','<service-secret>')
+cli.logout()
 ```
 
 Login with a SP and PEM certificate
@@ -40,11 +51,8 @@ Login with a SP and PEM certificate
 import azcli from 'azcli-npm';
 
 var cli = new azcli()
-var result = cli.loginWithCert('<tenant-id>', '<cert-path>','<service-secret>')
-console.log(result)
-
-result = cli.logout()
-console.log(result)
+cli.loginWithCert('<tenant-id>', '<cert-path>','<service-secret>')
+cli.logout()
 ```
 
 Set Subscription
@@ -54,39 +62,23 @@ import azcli from 'azcli-npm';
 
 var cli = new azcli()
 cli.login('<tenant-id>', '<service-id>','<service-secret>')
-
-
-//Note: quotes are passed literly with the argument when using arg() calls.
-//You do not need to quote surround an argument with spaces.
-//Individual arguments should be their own arg() call, with spaces, with nothing escaped.
-
-//this results in : az account set --subscription="My demos"
-cli.arg('account').arg('set').arg('--subscription=My demos').exec()
-
-cli.logout()
+   .setSubscription('<subscription-name>')
+   .logout()
 ```
-
-Set Subscription using argument line parsing
-
-```js
-import azcli from 'azcli-npm';
-
-var cli = new azcli()
-cli.login('<tenant-id>', '<service-id>','<service-secret>')
-
-cli.line('account set --subscription \"My demos\"').exec()
-
-cli.logout()
-```
-
 List VMs via json object
 
 ```js
 import azcli from 'azcli-npm';
 
 var cli = new azcli()
+var results =
 cli.login('<tenant-id>', '<service-id>','<service-secret>')
-var results = cli.arg('vm').arg('list').execJson<any>()
+   .setSubscription('<subscription-name')
+   .beginCmd()
+     .arg('vm')
+     .arg('list')
+   .execJson<any>()
+
 results.forEach(function(element)=>{
     console.log(element.id)
     console.log(element.name)
@@ -95,6 +87,74 @@ results.forEach(function(element)=>{
 
 cli.logout()
 ```
+
+## Unit test/mocking
+
+If you want to incoroporate this module into your unit tests we provide a built-in mocking system, or you can roll your own.
+
+To roll your own create a class that implements ShellRunner and its constructor. Then just override all the public facing functions
+
+```js
+import azcli, { ShellRunner, ShellRunnerType, IExecResults } from 'azcli-npm'
+
+export class MyMock extends ShellRunner {
+    constructor(shellPath: string){
+        super(shellPath)
+    };
+}
+
+//Now you can use this class as the shell override type when creating a new cli()
+var cli = new azcli(<IAzOptions> {
+    shellRunner: MyMock
+})
+```
+
+You can instead use the built-in mocking system which provides helpers for setting expected response types for commands
+
+```js
+import cli, { IAzOptions, IExecResults, 
+  MockResponseTypes, MockRunner, MockResponse, MockResponseFunctions} 'azcli-npm'
+
+let options = <IAzOptions>{ shellRunner: MockRunner}
+let wrapper = MockResponse(options)
+
+//grab the cli instance injected with MockRunner
+let runner = wrapper.cli
+
+//the mr object is used to inject responses before commands are executed
+//these functions return the cli instance so you can directly chain off it
+let mr = wrapper.mr
+
+
+//now you can assign response objects before calling commands
+
+//this will be the result for the setSubscription() call
+mr.AddMockResponse( MockResponseTypes.justReturnCode ) //-> returns wrapper.cli
+  .setSubscription('subscription with space')
+
+//this creates a custom result for the 'webapp list' cmd after
+ let results = 
+    mr.AddResponse(<IExecResults>{
+        code: 0, 
+        stdout: JSON.stringify([{id: '/id'}]) 
+    }) // -> returns wrapper.cli so we can chain from it
+    .beginCmd()
+        .arg('webapp')
+        .arg('list')
+    .execJson<any>()
+
+console.log(results[0].id)
+
+//You can also use this without chaining if you have commands pre-wrapped
+mr.AddMockResponse( MockResponseTypes.justReturnCode )
+mr.AddMockResponse( MockResponseTypes.justReturnCode )
+
+//this chain will consume the two mock responses above
+runner.login(...)
+      .setSubscription(...)
+
+```
+
 
 ## Contributing
 
