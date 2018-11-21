@@ -51,7 +51,7 @@ Login with a SP and PEM certificate
 import azcli from 'azcli-npm';
 
 var cli = new azcli()
-cli.loginWithCert('<tenant-id>', '<cert-path>','<service-secret>')
+cli.loginWithCert('<tenant-id>', '<service-id>','<cert-path>')
 cli.logout()
 ```
 
@@ -61,7 +61,7 @@ Set Subscription
 import azcli from 'azcli-npm';
 
 var cli = new azcli()
-cli.login('<tenant-id>', '<service-id>','<service-secret>')
+cli.login(...)
    .setSubscription('<subscription-name>')
    .logout()
 ```
@@ -72,8 +72,8 @@ import azcli from 'azcli-npm';
 
 var cli = new azcli()
 var results =
-cli.login('<tenant-id>', '<service-id>','<service-secret>')
-   .setSubscription('<subscription-name')
+cli.login(...)
+   .setSubscription(...)
    .beginCmd()
      .arg('vm')
      .arg('list')
