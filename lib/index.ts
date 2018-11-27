@@ -4,8 +4,12 @@ import * as events from 'events';
 /**
  * Error object for failed az-cli commands
  */
-export interface IAzError {
-
+export class AzError extends Error {
+    constructor(error: string, code: number) {
+        super('code: ' + code + ' error: ' + error)
+        this.stderr = error
+        this.code = code
+    }
     /** error output */
     stderr: string;
 
@@ -103,8 +107,7 @@ export default class cli extends events.EventEmitter {
         if (result.code != 0){
             this.emit('error', "Error Code: [" + result.code + "]");
             this.emit('error', result.stderr);
-            let err =  <IAzError>{ code : result.code, stderr: result.stderr, error: result.error };
-            throw err;
+            throw new AzError( result.stderr, result.code);
         }
     }
 
@@ -191,7 +194,7 @@ export default class cli extends events.EventEmitter {
      * @param serviceId accountId of the service principal
      * @param serviceSecret service principal secret/password
      * @returns {cli} return self for chaining
-     * @throws {IAzError}
+     * @throws {AzError}
      */
     public login(tenantId: string, serviceId: string, serviceSecret: string) : cli {
         this._login(tenantId, serviceId, serviceSecret)
@@ -204,7 +207,7 @@ export default class cli extends events.EventEmitter {
      * @param serviceId accountId of the service principal
      * @param certificatePath path to a PEM certificate associated with the service principal
      * @returns {cli} return self for chaining
-     * @throws {IAzError}
+     * @throws {AzError}
      */
     public loginWithCert(tenantId: string, serviceId: string, certificatePath: string) : cli {
         this._login(tenantId, serviceId, null, certificatePath)
@@ -225,7 +228,7 @@ export default class cli extends events.EventEmitter {
      * set the current azure subscription context
      * @param subscription {string} - Name of the subscription
      * @returns {cli} - return self for chaining
-     * @throws {IAzError}
+     * @throws {AzError}
      */
     public setSubscription(subscription: string) : cli {
 
@@ -278,7 +281,7 @@ export default class cli extends events.EventEmitter {
     /**
      * Execute the az-cli tool with the previously supplied arguments.
      * @returns {string} - returns the results of the tool as a raw string
-     * @throws {IAzError}
+     * @throws {AzError}
      */
     public execRawString(): string {
 
@@ -290,7 +293,7 @@ export default class cli extends events.EventEmitter {
     /**
      * Execute the az-cli tool with the previously supplied arguments.
      * @returns {T} - Returns a object deserialized from json ouput of the az-cli tool
-     * @throws {IAzError}
+     * @throws {AzError}
      */
     public execJson<T>(): T {
 
@@ -302,7 +305,7 @@ export default class cli extends events.EventEmitter {
 
     /**
      * Execute the az-cli tool with the previously supplied arguments.
-     * @throws {IAzError}
+     * @throws {AzError}
      */
     public exec(): void {
         let result = this.runner.exec();
