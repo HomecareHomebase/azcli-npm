@@ -1,5 +1,5 @@
 import cli, { IAzOptions, IExecResults, 
-  MockResponseTypes, MockRunner, MockResponse, MockResponseFunctions} from '../dist'
+  MockResponseTypes, MockRunner, MockResponse, MockResponseFunctions, AzError} from '../dist'
 import {expect} from 'chai'
 import 'mocha'
 
@@ -15,6 +15,21 @@ describe('bootstrap', () => {
 
     runner = wrapper.cli
     mr = wrapper.mr
+  })
+
+  it('#throw correct error', ()=> {
+
+    let azcli = new cli()
+
+    try {
+      azcli.arg('wrong').arg('arg').exec()
+      expect(false).true('Should have thrown error')
+    } catch(e){
+      let err = <AzError>e
+      expect(err).not.null
+      expect(err.code).greaterThan(0)
+      expect(err.stderr).not.null
+    }
   })
 
   it('#should return version', () => {

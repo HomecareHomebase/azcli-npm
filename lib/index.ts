@@ -105,8 +105,8 @@ export default class cli extends events.EventEmitter {
 
     private throwIfError(result : IExecResults): void {
         if (result.code != 0){
-            this.emit('error', "Error Code: [" + result.code + "]");
-            this.emit('error', result.stderr);
+            this.emit('clierror', "Error Code: [" + result.code + "]");
+            this.emit('clierror', result.stderr);
             throw new AzError( result.stderr, result.code);
         }
     }
