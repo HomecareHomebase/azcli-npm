@@ -1,6 +1,7 @@
 import * as Q from 'q';
 import * as child from 'child_process';
 import events = require('events');
+import { isRegExp } from 'util';
 
 
 /**
@@ -175,13 +176,41 @@ export class ShellRunner extends events.EventEmitter {
        // let defer = Q.defer();
 
         let r = child.spawnSync(this.getShellPath(), this.getShellArgs(), this.getSpawnOptions());
-
         this.clear()
         
         var res: IExecResults = <IExecResults>{ code: r.status, error: r.error, stdout: "", stderr: ""};
         res.stdout = (r.stdout) ? r.stdout.toString() : "";
         res.stderr = (r.stderr) ? r.stderr.toString() : "";
         return res;
+    }
+
+    public async execAsync(): Promise<IExecResults> {
+
+        let proc = child.spawn(this.getShellPath(), this.getShellArgs(), this.getSpawnOptions())
+        let p = new Promise<IExecResults>((resolves, rejected)=>
+        {
+            var res: IExecResults = <IExecResults>{}
+
+            let stdout = (proc.stdout && proc.stdout.readable) ? Buffer.alloc(0) : null,
+            stderr = (proc.stderr && proc.stderr.readable) ? Buffer.alloc(0) : null
+
+            if (Buffer.isBuffer(stdout)) {
+                proc.stdout.on('data', (data) => stdout = Buffer.concat([ stdout, data ]));
+            }
+            if (Buffer.isBuffer(stderr)) {
+                proc.stderr.on('data', (data) => stderr = Buffer.concat([ stderr, data ]));
+            }
+
+            proc.on('close', (exitCode) => {
+                res.code = exitCode
+                res.stdout = (stdout) ? stdout.toString() : "";
+                res.stderr = (stderr) ? stderr.toString() : "";
+                resolves(res)
+            })
+
+        })
+        
+        return await p
     }
 
 

@@ -311,6 +311,41 @@ export default class cli extends events.EventEmitter {
         let result = this.runner.exec();
         this.throwIfError(result);
     }
+
+    /**
+     * Execute the az-cli tool with the previously supplied arguments.
+     * @returns {string} - returns the results of the tool as a raw string
+     * @throws {AzError}
+     */
+    public async execRawStringAsync(): Promise<string> {
+
+        let result = await this.runner.execAsync();
+        this.throwIfError(result);
+        return result.stdout;
+    }
+
+    /**
+     * Execute the az-cli tool with the previously supplied arguments.
+     * @returns {T} - Returns a object deserialized from json ouput of the az-cli tool
+     * @throws {AzError}
+     */
+    public async execJsonAsync<T>(): Promise<T> {
+
+        let result = await this.runner.arg(['-o','json']).execAsync();
+        this.throwIfError(result);
+
+        return JSON.parse(result.stdout);
+    }
+
+    /**
+     * Execute the az-cli tool with the previously supplied arguments.
+     * @throws {AzError}
+     */
+    public async execAsync(): Promise<void> {
+        let result = await this.runner.execAsync();
+        this.throwIfError(result);
+    }
+
 }
 
 //Barrel exporting our supporting types for unit/mock support
