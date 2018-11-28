@@ -100,9 +100,6 @@ export default class cli extends events.EventEmitter {
     private runner: ShellRunner;
     private azVersion: string;
 
-    private usingCert: boolean = false;
-    private certPath: string = "";
-
     private throwIfError(result : IExecResults): void {
         if (result.code != 0){
             this.emit('clierror', "Error Code: [" + result.code + "]");
@@ -115,7 +112,9 @@ export default class cli extends events.EventEmitter {
 
         try {
 
+            this.clear()
             var results = this.arg('-v').execRawString();      
+            this.clear()
             
             var match = results.match(/^azure-cli \(?(.*)\)/);           
             if (match != null && match.length > 1)
@@ -164,13 +163,7 @@ export default class cli extends events.EventEmitter {
     private _login(tenantId: string, serviceId: string, serviceSecret: string | null = null, certificate: string | null = null) : void {
 
         if (certificate != null) {
-            this.usingCert = true;
-            this.certPath = certificate;
             serviceSecret = certificate;
-        }
-        else {
-            this.usingCert = false;
-            this.certPath = "";
         }
 
         this.runner.clear()
@@ -180,6 +173,7 @@ export default class cli extends events.EventEmitter {
             .arg('-p '+serviceSecret)
             .arg('--tenant='+tenantId)
             .exec()
+        this.runner.clear()
     }
 
     /** Return the detected az-cli tool version */
@@ -221,6 +215,7 @@ export default class cli extends events.EventEmitter {
         this.arg('account')
             .arg('clear')
             .exec()
+        this.runner.clear()
         return this
     }
 
@@ -237,13 +232,21 @@ export default class cli extends events.EventEmitter {
             .arg('set')
             .arg('--subscription=' + subscription)
             .exec()
+        this.runner.clear()
+        return this
+    }
+
+    public clear(): cli {
+        this.runner.clear()
         return this
     }
 
     /** start a new command stack that should end with an exec*() call */
-    public beginCmd(): cli {
-        this.runner.clear()
-        return this
+    public start(): cli {
+        let runner = <cli>Object.create(this)
+        runner.runner = this.runner.start()
+        runner.clear()
+        return runner
     }
 
     /**

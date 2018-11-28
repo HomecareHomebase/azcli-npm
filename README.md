@@ -74,7 +74,7 @@ var cli = new azcli()
 var results =
 cli.login(...)
    .setSubscription(...)
-   .beginCmd()
+   .start()
      .arg('vm')
      .arg('list')
    .execJson<any>()
@@ -138,7 +138,7 @@ mr.AddMockResponse( MockResponseTypes.justReturnCode ) //-> returns wrapper.cli
         code: 0, 
         stdout: JSON.stringify([{id: '/id'}]) 
     }) // -> returns wrapper.cli so we can chain from it
-    .beginCmd()
+    .start()
         .arg('webapp')
         .arg('list')
     .execJson<any>()

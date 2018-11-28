@@ -20,6 +20,9 @@ export interface IExecResults {
 
     /** Error on failure */
     error: Error;
+
+    /** arguments */
+    arguments: string[]
 }
 
 export interface ShellRunnerType {
@@ -36,11 +39,11 @@ export class ShellRunner extends events.EventEmitter {
         this.shellPath = shellPath;
     };
 
-    private shellPath: string;
-    private args:string[] = [];
+    protected shellPath: string;
+    protected args:string[] = [];
 
 
-    private parseArgLine(arg: string ): string[] {
+    protected parseArgLine(arg: string ): string[] {
 
         var args = [];
 
@@ -114,6 +117,16 @@ export class ShellRunner extends events.EventEmitter {
     }
 
     /**
+     * Start a new arg->exec chain which is guaranteed to be async safe
+     * @returns {ShellRunner} - returns a new instance of a shell runner with an isolated argument buffer
+     */
+    public start(): ShellRunner {
+
+        let shell = new ShellRunner(this.shellPath)
+        return shell
+    }
+
+    /**
      * Add argument
      * Add one or more arguments to the argument buffer 
      * returns ShellRunner to chain
@@ -171,23 +184,29 @@ export class ShellRunner extends events.EventEmitter {
         return this;
     }
 
+    /**
+     * Execute the shell command against the current argument collection
+     * @returns {IExecResults} - results of the shell execution
+     */
     public exec() : IExecResults {
 
-       // let defer = Q.defer();
-
         let r = child.spawnSync(this.getShellPath(), this.getShellArgs(), this.getSpawnOptions());
-        this.clear()
         
         var res: IExecResults = <IExecResults>{ code: r.status, error: r.error, stdout: "", stderr: ""};
         res.stdout = (r.stdout) ? r.stdout.toString() : "";
         res.stderr = (r.stderr) ? r.stderr.toString() : "";
+        res.arguments = this.args
         return res;
     }
 
-    public async execAsync(): Promise<IExecResults> {
+    /**
+     * Execute the shell command async
+     * @returns {Promise<IExecResults>} - results of the shell execution
+     */
+    public execAsync(): Promise<IExecResults> {
 
         let proc = child.spawn(this.getShellPath(), this.getShellArgs(), this.getSpawnOptions())
-        let p = new Promise<IExecResults>((resolves, rejected)=>
+        let p = new Promise<IExecResults>((resolves)=>
         {
             var res: IExecResults = <IExecResults>{}
 
@@ -205,12 +224,11 @@ export class ShellRunner extends events.EventEmitter {
                 res.code = exitCode
                 res.stdout = (stdout) ? stdout.toString() : "";
                 res.stderr = (stderr) ? stderr.toString() : "";
+                res.arguments = this.args
                 resolves(res)
             })
-
         })
-        
-        return await p
+        return p
     }
 
 

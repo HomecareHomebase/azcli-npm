@@ -27,6 +27,7 @@ export class MockRunnerResponse {
 
 //create local scoped global object to hold pending mock responses
 let _currentMockResponse = new MockRunnerResponse() 
+let _currentMockShellRunner: MockRunner 
 
 /** Predefined mock response types for simple mock setup */
 export enum MockResponseTypes {
@@ -44,6 +45,7 @@ export interface MockResponseFunctions {
     AddResponse(response: IExecResults): cli
     ClearResponseList(): cli
     AddMockResponse(type: MockResponseTypes): cli 
+    GetMockShell(): MockRunner
 }
 
 export interface MockResponse {
@@ -83,7 +85,9 @@ export function MockResponse(options: IAzOptions): MockResponse {
                 }
             }
             return _cli
-        }
+        },
+
+        GetMockShell: (): MockRunner => {return _currentMockShellRunner}
     }
 
     _currentMockResponse.Add(<IExecResults>{code: 0, stdout: 'azure-cli (2.0.0)\r\n\r\n' })
@@ -96,24 +100,64 @@ export function MockResponse(options: IAzOptions): MockResponse {
 export class MockRunner extends ShellRunner {
     constructor(shellPath: string){
         super(shellPath)
+
+        this.mockArgs = []
+        _currentMockShellRunner = this
     };
 
+    mockArgs: string[]
+
     public clear(): void {
+        this.mockArgs = []
+    }
+
+    public start(): ShellRunner {
+        let runner = new MockRunner(this.shellPath)
+        runner.clear()
+        return runner
     }
 
     public arg(val: string | string[]): ShellRunner {
+        
+        if (!val) {
+            return this;
+        }
+
+        if (val instanceof Array) {
+            this.mockArgs = this.mockArgs.concat(val);
+        }
+        else if (typeof (val) === 'string') {
+            this.mockArgs = this.mockArgs.concat(val.trim());
+        }
         return this
     }
 
     public line(val: string): ShellRunner {
-        return this
+        if (!val) {
+            return this;
+        }
+
+        this.mockArgs = this.mockArgs.concat(this.parseArgLine(val));
+        return this;
     }
 
     public argIf(condition: ()=>boolean, val: string | string[] ): ShellRunner {
-        return this
+        if (condition) {
+            this.arg(val);
+        }
+        return this;
     }
 
     public exec() : IExecResults {
-        return _currentMockResponse.GetNext()
+        let r = _currentMockResponse.GetNext()
+        r.arguments = this.args
+        return r
+    }
+
+    
+    public async execAsync() : Promise<IExecResults> {
+        let r = _currentMockResponse.GetNext()
+        r.arguments = this.args
+        return r
     }
 }
