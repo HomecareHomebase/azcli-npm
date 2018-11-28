@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.1.2"></a>
+## [1.1.2](https://github.com/HomecareHomebase/azcli-npm/compare/v1.1.1...v1.1.2) (2018-11-28)
+
+
+### Bug Fixes
+
+* Resolving async argument building. arguments should now start with a .start() method which can then be used to chain args() and .exec* against. This isolates arguments to a unique object and allows async/await usage ([#5](https://github.com/HomecareHomebase/azcli-npm/issues/5)) ([c7c1fd1](https://github.com/HomecareHomebase/azcli-npm/commit/c7c1fd1))
+
+
+
 <a name="1.1.1"></a>
 ## [1.1.1](https://github.com/HomecareHomebase/azcli-npm/compare/v1.1.0...v1.1.1) (2018-11-27)
 
