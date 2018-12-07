@@ -104,10 +104,10 @@ export class ShellRunner extends events.EventEmitter {
         return this.args;
     }
 
-    private getSpawnOptions(): child.SpawnSyncOptions {
-        let result = <child.SpawnSyncOptions>{};
-        result.cwd = process.cwd();
-        result.env = process.env;
+    private getSpawnOptions(options: child.SpawnSyncOptions = <child.SpawnSyncOptions>{}): child.SpawnSyncOptions {
+        let result = options;
+        result.cwd = process.cwd()
+        result.env = process.env
         return result;
     }
 
@@ -229,6 +229,21 @@ export class ShellRunner extends events.EventEmitter {
             })
         })
         return p
+    }
+
+    public async execStream(): Promise<number> {
+
+        let proc = child.spawn(this.getShellPath(), this.getShellArgs(), 
+        this.getSpawnOptions(<child.SpawnSyncOptions>{stdio:"inherit"}))
+        let p = new Promise<number>((resolves, rejected)=>
+        {
+            proc.on('close', (exitCode) => {
+                resolves(exitCode)
+            })
+
+        })
+        
+        return await p
     }
 
 
