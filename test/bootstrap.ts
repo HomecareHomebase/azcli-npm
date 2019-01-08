@@ -1,5 +1,5 @@
 import cli, { IAzOptions, IExecResults, 
-  MockResponseTypes, MockRunner, MockResponse, MockResponseFunctions, AzError} from '../dist'
+  MockResponseTypes, MockRunner, MockResponse, MockResponseFunctions, AzError, ShellRunner} from '../dist'
 import {expect} from 'chai'
 import 'mocha'
 import * as Q from 'q';
@@ -18,6 +18,16 @@ describe('bootstrap', () => {
 
     runner = wrapper.cli
     mr = wrapper.mr
+  })
+
+  it ('#line test', ()=> {
+
+    var cli = new ShellRunner("cmd")
+    var response = cli
+      .start()
+      .line("/?")
+      .exec()
+      expect(response.stdout.length).greaterThan(300)
   })
 
   it('#throw correct error', ()=> {

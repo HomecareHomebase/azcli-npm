@@ -49,18 +49,18 @@ export class ShellRunner extends events.EventEmitter {
 
         var inQuotes = false;
         var escaped = false;
-        var arg = '';
+        var specArg = '';
 
         var append = function (c: string) {
             if (escaped && c !== '"') {
-                arg += '\\';
+                specArg += '\\';
             }
 
-            arg += c;
+            specArg += c;
             escaped = false;
         }
 
-        for (var i = 0; i < arg.length; i++) {
+        for (let i = 0; i < arg.length; i++) {
             var c = arg.charAt(i);
 
             if (c === '"') {
@@ -79,9 +79,9 @@ export class ShellRunner extends events.EventEmitter {
             }
 
             if (c === ' ' && !inQuotes) {
-                if (arg.length > 0) {
-                    args.push(arg);
-                    arg = '';
+                if (specArg.length > 0) {
+                    args.push(specArg);
+                    specArg = '';
                 }
                 continue;
             }
@@ -89,8 +89,8 @@ export class ShellRunner extends events.EventEmitter {
             append(c);
         }
 
-        if (arg.length > 0) {
-            args.push(arg.trim());
+        if (specArg.length > 0) {
+            args.push(specArg.trim());
         }
 
         return args;

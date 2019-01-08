@@ -7,6 +7,7 @@
   "scripts": {
     "test": "mocha --timeout 30000 -r ts-node/register test/**/*.ts",
     "build": "tsc -p ./lib",
+    "watch": "tsc -w -p ./lib",
     "build:live": "nodemon --watch 'lib/**/*.ts' --exec 'ts-node' src/index.ts",
     "release": "standard-version"
   },
