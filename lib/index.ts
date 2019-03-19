@@ -116,7 +116,7 @@ export default class cli extends events.EventEmitter {
             var results = this.arg('-v').execRawString();      
             this.clear()
             
-            var match = results.match(/^azure-cli \(?(.*)\)/);           
+            var match = results.match(/^azure-cli\s+\(?(.*)\)?/);           
             if (match != null && match.length > 1)
             {
                 return match[1];
